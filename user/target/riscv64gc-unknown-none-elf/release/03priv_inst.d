@@ -1,1 +1,0 @@
-/home/shang/myOS/user/target/riscv64gc-unknown-none-elf/release/03priv_inst: /home/shang/myOS/user/src/bin/03priv_inst.rs /home/shang/myOS/user/src/console.rs /home/shang/myOS/user/src/lang_items.rs /home/shang/myOS/user/src/lib.rs /home/shang/myOS/user/src/syscall.rs
