@@ -1,0 +1,1 @@
+/home/shang/myOS/user/target/riscv64gc-unknown-none-elf/release/04priv_csr: /home/shang/myOS/user/src/bin/04priv_csr.rs /home/shang/myOS/user/src/console.rs /home/shang/myOS/user/src/lang_items.rs /home/shang/myOS/user/src/lib.rs /home/shang/myOS/user/src/syscall.rs
