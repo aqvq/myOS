@@ -1,9 +1,9 @@
 // os/src/trap/mod.rs
 
 mod context;
-use crate::batch::run_next_app;
 use crate::syscall::syscall;
 use core::arch::global_asm;
+use crate::task;
 use riscv::register::{
     mtvec::TrapMode,
     scause::{self, Exception, Trap},
@@ -12,6 +12,7 @@ use riscv::register::{
 
 global_asm!(include_str!("trap.asm"));
 
+/// set trap code
 pub fn init() {
     extern "C" {
         fn __alltraps();
@@ -32,12 +33,20 @@ pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
         }
         Trap::Exception(Exception::StoreFault) | Trap::Exception(Exception::StorePageFault) => {
             println!("[kernel] PageFault in application, kernel killed it.");
-            run_next_app();
+            task::run_app();
         }
         Trap::Exception(Exception::IllegalInstruction) => {
             println!("[kernel] IllegalInstruction in application, kernel killed it.");
-            run_next_app();
+            task::run_app();
         }
+        // Trap::Exception(Exception::InstructionFault)=>{
+        //     println!("[kernel] InstructionFault in application, kernel killed it.");
+        //     task::run_app();
+        // }
+        // Trap::Exception(Exception::LoadFault)=>{
+        //     println!("[kernel] LoadFault in application, kernel killed it.");
+        //     task::run_app();
+        // }
         _ => {
             panic!(
                 "Unsupported trap {:?}, stval = {:#x}!",

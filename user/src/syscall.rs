@@ -6,6 +6,7 @@ const SYSCALL_WRITE: usize = 64;
 const SYSCALL_EXIT: usize = 93;
 
 fn syscall(id: usize, args: [usize; 3]) -> isize {
+    println!("user/syscall");
     let mut ret: isize;
     unsafe{
         asm!(

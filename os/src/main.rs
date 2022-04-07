@@ -6,12 +6,14 @@
 
 #[macro_use]
 mod console;
-pub mod batch;
 mod lang_items;
 mod sbi;
 mod safe_cell;
-pub mod syscall;
-pub mod trap;
+mod syscall;
+mod trap;
+mod config;
+mod loader;
+mod task;
 
 use core::arch::global_asm;
 global_asm!(include_str!("entry.asm"));
@@ -20,11 +22,12 @@ global_asm!(include_str!("link_app.asm"));
 #[no_mangle]
 pub fn rust_main() -> ! {
     clear_bss();
-
-    println!("[kernel] Hello!");
+    println!("[kernel] clear_bss() Done!");
     trap::init();
-    batch::init();
-    batch::run_next_app();
+    println!("[kernel] trap::init() Done!");
+    task::init();
+    println!("[kernel] task::init() Done!");
+    task::run_app();
 }
 
 // TODO: sbss()和ebss()是什么意思？

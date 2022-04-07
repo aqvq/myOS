@@ -3,10 +3,11 @@
 const SYSCALL_WRITE: usize = 64;
 const SYSCALL_EXIT: usize = 93;
 
-use crate::batch;
+use crate::task;
 const FD_STDOUT: usize = 1;
 
 pub fn sys_write(file_descriptor: usize, buf: *const u8, len: usize) -> isize {
+    println!("os/sys_write");
     match file_descriptor {
         FD_STDOUT => {
             let slice = unsafe { core::slice::from_raw_parts(buf, len) };
@@ -22,7 +23,7 @@ pub fn sys_write(file_descriptor: usize, buf: *const u8, len: usize) -> isize {
 
 pub fn sys_exit(exit_state: i32) -> ! {
     println!("[kernel] Application exited with code {}", exit_state);
-    batch::run_next_app()
+    task::run_app()
 }
 
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
