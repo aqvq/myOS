@@ -4,6 +4,10 @@ use crate::safe_cell::SafeCell;
 use crate::trap::*;
 use lazy_static::*;
 
+mod context;
+mod switch;
+mod task;
+
 #[repr(align(4096))]
 struct KernelStack {
     data: [u8; KERNEL_STACK_SIZE],
