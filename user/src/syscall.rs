@@ -35,4 +35,3 @@ pub fn sys_yield() -> isize{
 
 // user/srd/lib.rs
 
-pub fn yield_() -> isize{ sys_yield()}

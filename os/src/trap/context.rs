@@ -13,8 +13,9 @@ impl TrapContext {
     pub fn set_sp(&mut self, sp: usize) {
         self.x[2] = sp;
     }
+
     pub fn app_init_context(entry: usize, sp: usize) -> Self {
-        println!("entry: {:x}", entry);
+        // println!("entry: {:x}", entry);
         let mut sstatus = sstatus::read();
         sstatus.set_spp(SPP::User);
         let mut cx = Self {
@@ -23,7 +24,7 @@ impl TrapContext {
             sepc: entry,
         };
         cx.set_sp(sp);
-        println!("[kernel] app_init_context Done!");
+        // println!("[kernel] app_init_context Done!");
         cx
     }
 }

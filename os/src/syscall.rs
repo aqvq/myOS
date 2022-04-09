@@ -4,6 +4,7 @@ const SYSCALL_WRITE: usize = 64;
 const SYSCALL_EXIT: usize = 93;
 
 use crate::task;
+use crate::task::exit_current_and_run_next;
 const FD_STDOUT: usize = 1;
 
 pub fn sys_write(file_descriptor: usize, buf: *const u8, len: usize) -> isize {
@@ -23,7 +24,8 @@ pub fn sys_write(file_descriptor: usize, buf: *const u8, len: usize) -> isize {
 
 pub fn sys_exit(exit_state: i32) -> ! {
     println!("[kernel] Application exited with code {}", exit_state);
-    task::run_app()
+    exit_current_and_run_next();
+    panic!("Unreachable in sys_exit!");
 }
 
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {

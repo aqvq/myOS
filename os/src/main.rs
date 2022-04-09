@@ -22,12 +22,10 @@ global_asm!(include_str!("link_app.asm"));
 #[no_mangle]
 pub fn rust_main() -> ! {
     clear_bss();
-    println!("[kernel] clear_bss() Done!");
     trap::init();
-    println!("[kernel] trap::init() Done!");
-    task::init();
-    println!("[kernel] task::init() Done!");
-    task::run_app();
+    loader::load_apps();
+    task::run_first_task();
+    panic!("Unreachable in rust_main!");
 }
 
 // TODO: sbss()和ebss()是什么意思？

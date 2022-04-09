@@ -32,21 +32,15 @@ pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
             cx.x[10] = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
         }
         Trap::Exception(Exception::StoreFault) | Trap::Exception(Exception::StorePageFault) => {
-            println!("[kernel] PageFault in application, kernel killed it.");
-            task::run_app();
+            println!("[kernel] PageFault in application, bad addr = {:#x}, bad instruction = {:#x}, kernel killed it.", stval, cx.sepc);
+            panic!("[kernel] Cannot continue!");
+            //run_next_app();
         }
         Trap::Exception(Exception::IllegalInstruction) => {
             println!("[kernel] IllegalInstruction in application, kernel killed it.");
-            task::run_app();
+            panic!("[kernel] Cannot continue!");
+            //run_next_app();
         }
-        // Trap::Exception(Exception::InstructionFault)=>{
-        //     println!("[kernel] InstructionFault in application, kernel killed it.");
-        //     task::run_app();
-        // }
-        // Trap::Exception(Exception::LoadFault)=>{
-        //     println!("[kernel] LoadFault in application, kernel killed it.");
-        //     task::run_app();
-        // }
         _ => {
             panic!(
                 "Unsupported trap {:?}, stval = {:#x}!",

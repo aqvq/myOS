@@ -1,7 +1,49 @@
 // os/src/loader.rs
 
-use crate::config::*;
+use riscv::register::mcause::Trap;
+
+use crate::{config::*, trap::TrapContext};
 use core::arch::asm;
+
+#[repr(align(4096))]
+#[derive(Clone, Copy)]
+struct KernelStack {
+    data: [u8; KERNEL_STACK_SIZE],
+}
+
+#[repr(align(4096))]
+#[derive(Clone, Copy)]
+struct UserStack {
+    data: [u8; USER_STACK_SIZE],
+}
+
+static KERNEL_STACK: [KernelStack; MAX_APP_NUM] = [KernelStack {
+    data: [0; KERNEL_STACK_SIZE],
+}; MAX_APP_NUM];
+static USER_STACK: [UserStack; MAX_APP_NUM] = [UserStack {
+    data: [0; USER_STACK_SIZE],
+}; MAX_APP_NUM];
+
+impl KernelStack {
+    fn get_sp(&self) -> usize {
+        self.data.as_ptr() as usize + KERNEL_STACK_SIZE
+    }
+
+    pub fn push_context(&self, cx: TrapContext) -> usize {
+        let cx_ptr = (self.get_sp() - core::mem::size_of::<TrapContext>()) as *mut TrapContext;
+        unsafe {
+            *cx_ptr = cx;
+        }
+        // println!("[kernel] push_context Done!");
+        cx_ptr as usize
+    }
+}
+
+impl UserStack {
+    fn get_sp(&self) -> usize {
+        self.data.as_ptr() as usize + USER_STACK_SIZE
+    }
+}
 
 pub fn load_apps() {
     extern "C" {
@@ -44,4 +86,11 @@ pub fn get_num_app() -> usize {
         fn _num_app();
     }
     unsafe { (_num_app as usize as *const usize).read_volatile() }
+}
+
+pub fn init_app_cx(app_id: usize) -> usize {
+    KERNEL_STACK[app_id].push_context(TrapContext::app_init_context(
+        get_base_i(app_id),
+        USER_STACK[app_id].get_sp(),
+    ))
 }

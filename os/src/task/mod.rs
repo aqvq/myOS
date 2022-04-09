@@ -2,6 +2,8 @@ mod context;
 mod switch;
 mod task;
 
+// use core::borrow::BorrowMut;
+
 use crate::config::*;
 use crate::loader::*;
 use crate::safe_cell::SafeCell;
@@ -10,44 +12,7 @@ use context::*;
 use lazy_static::*;
 use task::*;
 
-#[repr(align(4096))]
-struct KernelStack {
-    data: [u8; KERNEL_STACK_SIZE],
-}
-
-#[repr(align(4096))]
-struct UserStack {
-    data: [u8; USER_STACK_SIZE],
-}
-
-static KERNEL_STACK: KernelStack = KernelStack {
-    data: [0; KERNEL_STACK_SIZE],
-};
-static USER_STACK: UserStack = UserStack {
-    data: [0; USER_STACK_SIZE],
-};
-
-impl KernelStack {
-    fn get_sp(&self) -> usize {
-        self.data.as_ptr() as usize + KERNEL_STACK_SIZE
-    }
-
-    pub fn push_context(&self, cx: TrapContext) -> &'static mut TrapContext {
-        let cx_ptr = (self.get_sp() - core::mem::size_of::<TrapContext>()) as *mut TrapContext;
-        unsafe {
-            *cx_ptr = cx;
-        }
-        println!("[kernel] push_context Done!");
-        unsafe { cx_ptr.as_mut().unwrap() }
-    }
-}
-
-impl UserStack {
-    fn get_sp(&self) -> usize {
-        self.data.as_ptr() as usize + USER_STACK_SIZE
-    }
-}
-
+use self::switch::__switch;
 
 pub struct TaskManager {
     num_app: usize,
@@ -59,6 +24,61 @@ struct TaskManagerInner {
     current_task: usize,
 }
 
+impl TaskManager {
+    fn mark_current_suspended(&self) {
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].task_status = TaskStatus::Ready;
+    }
+
+    fn mark_current_exited(&self) {
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].task_status = TaskStatus::Exited;
+    }
+
+    fn run_next_task(&self) {
+        if let Some(next) = self.find_next_task() {
+            let mut inner = self.inner.exclusive_access();
+            // TODO: 为什么这里用excluesive_access而不用borrow_mut?
+            let current = inner.current_task;
+            inner.tasks[next].task_status = TaskStatus::Running;
+            inner.current_task = next;
+            // 这里的&mut是取可变引用，下面的&是取不可变引用。当前的task是要保存的，下一个task是要恢复的
+            let current_task_cx_ptr = &mut inner.tasks[current].task_cx as *mut TaskContext;
+            let next_task_cx_ptr = &inner.tasks[next].task_cx as *const TaskContext;
+            drop(inner); // 如果没有这行会出大错！！！
+            unsafe {
+                __switch(current_task_cx_ptr, next_task_cx_ptr);
+            }
+        } else {
+            panic!("[kernel] All applications completed!");
+        }
+    }
+
+    fn find_next_task(&self) -> Option<usize> {
+        let inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        // 为什么不从0开始呢？防止饿死
+        (current + 1..current + self.num_app + 1)
+            .map(|id| id % self.num_app)
+            .find(|id| inner.tasks[*id].task_status == TaskStatus::Ready)
+    }
+
+    fn run_first_task(&self) -> ! {
+        let mut inner = self.inner.exclusive_access();
+        let task0 = &mut inner.tasks[0];
+        task0.task_status = TaskStatus::Running;
+        let next_task_cx_ptr = &task0.task_cx as *const TaskContext;
+        drop(inner);
+        let mut _unused = TaskContext::zero_init();
+
+        unsafe {
+            __switch(&mut _unused as *mut TaskContext, next_task_cx_ptr);
+        }
+        panic!("Unreachable in run_first_task!");
+    }
+}
 
 // TODO: lazy_static用法
 lazy_static! {
@@ -84,33 +104,28 @@ lazy_static! {
     };
 }
 
-pub fn init() {
-    println!("[kernel] print_app_info Done!");
-    let app_manager = APP_MANAGER.exclusive_access();
-    app_manager.print_app_info();
-    drop(app_manager);
+fn mark_current_suspended() {
+    TASK_MANAGER.mark_current_suspended();
 }
 
-pub fn run_app() -> ! {
-    println!("run_app");
-    let mut app_manager = APP_MANAGER.exclusive_access();
-    let current_app = app_manager.get_current_app();
-    app_manager.move_to_next_app();
-    // println!("{:#?}", app_manager);
-    drop(app_manager);
+fn mark_current_exited() {
+    TASK_MANAGER.mark_current_exited();
+}
 
-    // if app_manager.get_current_app() >= app_manager.get_num_app() {
-    //     println!("[kernel] All tasks are completed!");
-    //     sys_exit(0);
-    // }
-    extern "C" {
-        fn __restore(cx_addr: usize);
-    }
-    unsafe {
-        __restore(KERNEL_STACK.push_context(TrapContext::app_init_context(
-            APP_BASE_ADDRESS + current_app * APP_SIZE_LIMIT,
-            USER_STACK.get_sp(),
-        )) as *const _ as usize);
-    }
-    panic!("Unreachable in task::run_app!");
+fn run_next_task() {
+    TASK_MANAGER.run_next_task();
+}
+
+pub fn suspend_current_and_run_next() {
+    mark_current_suspended();
+    run_next_task();
+}
+
+pub fn exit_current_and_run_next() {
+    mark_current_exited();
+    run_next_task();
+}
+
+pub fn run_first_task(){
+    TASK_MANAGER.run_first_task();
 }
