@@ -1,12 +1,14 @@
-use crate::config::*;
-use crate::loader::load_apps;
-use crate::safe_cell::SafeCell;
-use crate::trap::*;
-use lazy_static::*;
-
 mod context;
 mod switch;
 mod task;
+
+use crate::config::*;
+use crate::loader::*;
+use crate::safe_cell::SafeCell;
+use crate::trap::*;
+use context::*;
+use lazy_static::*;
+use task::*;
 
 #[repr(align(4096))]
 struct KernelStack {
@@ -45,62 +47,40 @@ impl UserStack {
         self.data.as_ptr() as usize + USER_STACK_SIZE
     }
 }
-#[derive(Debug)]
-struct AppManager {
+
+
+pub struct TaskManager {
     num_app: usize,
-    current_app: usize,
-    app_start: [usize; MAX_APP_NUM+1],
+    inner: SafeCell<TaskManagerInner>,
 }
 
-impl AppManager {
-    pub fn print_app_info(&self) {
-        for i in 0..self.num_app {
-            println!(
-                "[kernel] app_{} [{:#x}, {:#x})", // 左闭右开区间
-                i,
-                APP_BASE_ADDRESS + i * APP_SIZE_LIMIT,
-                APP_BASE_ADDRESS + (i + 1) * APP_SIZE_LIMIT
-            );
-        }
-    }
-
-    pub fn get_current_app(&self) -> usize {
-        self.current_app
-    }
-
-    pub fn move_to_next_app(&mut self) {
-        self.current_app += 1;
-    }
-
-    pub fn get_num_app(&self) -> usize {
-        self.num_app
-    }
-
+struct TaskManagerInner {
+    tasks: [TaskControlBlock; MAX_APP_NUM],
+    current_task: usize,
 }
 
 
 // TODO: lazy_static用法
 lazy_static! {
-    static ref APP_MANAGER: SafeCell<AppManager> = unsafe{
-        SafeCell::new({
-            // TODO: extern "C"如何知道_num_app的位置？难道是因为它们被链接到同一个文件里面？
-            extern "C" { fn _num_app(); }
-            let num_app_ptr = _num_app as *const usize;
-            let num_app = num_app_ptr.read_volatile(); // 内存读取操作
-            let mut app_start: [usize; MAX_APP_NUM + 1] = [0; MAX_APP_NUM + 1];
-            let app_start_raw: &[usize] =
-                core::slice::from_raw_parts(num_app_ptr.add(1), num_app + 1);
-            app_start[..=num_app].copy_from_slice(app_start_raw);
-
-            load_apps();
-            // TODO: rust的slice语法
-
-            AppManager{
-                num_app,
-                current_app: 0,
-                app_start,
-            }
-        })
+    pub static ref TASK_MANAGER: TaskManager = {
+        let num_app = get_num_app();
+        let mut tasks = [TaskControlBlock {
+            task_cx: TaskContext::zero_init(),
+            task_status: TaskStatus::UnInit,
+        }; MAX_APP_NUM];
+        for i in 0..num_app {
+            tasks[i].task_cx = TaskContext::goto_restore(init_app_cx(i));
+            tasks[i].task_status = TaskStatus::Ready;
+        }
+        TaskManager {
+            num_app,
+            inner: unsafe {
+                SafeCell::new(TaskManagerInner {
+                    tasks,
+                    current_task: 0,
+                })
+            },
+        }
     };
 }
 
@@ -127,7 +107,7 @@ pub fn run_app() -> ! {
         fn __restore(cx_addr: usize);
     }
     unsafe {
-        __restore( KERNEL_STACK.push_context(TrapContext::app_init_context(
+        __restore(KERNEL_STACK.push_context(TrapContext::app_init_context(
             APP_BASE_ADDRESS + current_app * APP_SIZE_LIMIT,
             USER_STACK.get_sp(),
         )) as *const _ as usize);

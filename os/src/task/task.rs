@@ -2,6 +2,7 @@
 
 use super::context::TaskContext;
 
+// TODO: Copy Clone PartialEq这些Trait了解一下啊
 #[derive(Copy, Clone, PartialEq)]
 pub enum TaskStatus{
     UnInit, // 未初始化
