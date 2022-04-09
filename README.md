@@ -27,7 +27,7 @@ rustup install nightly
 rustup default nightly
 ```
 
-我们最好把软件包管理器 `cargo` 所用的软件包镜像地址 `crates.io` 也换成中国科学技术大学的镜像服务器来加速三方库的下载。我们打开（如果没有就新建）` ~/.cargo/config` 文件，并把内容修改为：
+换源，如果有必要的话。打开（如果没有就新建）` ~/.cargo/config` 文件，并把内容修改为：
 
 ```bash
 [source.crates-io]
