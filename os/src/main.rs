@@ -6,14 +6,14 @@
 
 #[macro_use]
 mod console;
-mod lang_items;
-mod sbi;
-mod safe_cell;
-mod syscall;
-mod trap;
 mod config;
+mod lang_items;
 mod loader;
+mod safe_cell;
+mod sbi;
+mod syscall;
 mod task;
+mod trap;
 
 use core::arch::global_asm;
 global_asm!(include_str!("entry.asm"));
@@ -21,6 +21,7 @@ global_asm!(include_str!("link_app.asm"));
 
 #[no_mangle]
 pub fn rust_main() -> ! {
+    println!("[kernel] Starting...");
     clear_bss();
     trap::init();
     loader::load_apps();

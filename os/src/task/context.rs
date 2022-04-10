@@ -8,8 +8,8 @@ pub struct TaskContext {
 }
 
 impl TaskContext {
-    pub fn zero_init() -> TaskContext {
-        TaskContext {
+    pub fn zero_init() -> Self {
+        Self {
             ra: 0,
             sp: 0,
             s: [0; 12],

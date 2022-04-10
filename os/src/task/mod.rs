@@ -126,6 +126,6 @@ pub fn exit_current_and_run_next() {
     run_next_task();
 }
 
-pub fn run_first_task(){
+pub fn run_first_task() {
     TASK_MANAGER.run_first_task();
 }

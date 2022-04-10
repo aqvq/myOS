@@ -7,6 +7,7 @@ base_address = 0x80400000
 step = 0x20000
 linker = 'user/src/linker.ld'
 prefix = '[build.py]'
+DEBUG = True
 
 def exit_function():
     """
@@ -21,8 +22,7 @@ def build_apps(apps):
     Args:
         apps (list): user application name list 
     """
-    for app in apps:
-        app_id = 0
+    for app_id, app in enumerate(apps):
         lines = []
         lines_before = []
         with open(linker, 'r') as f:
@@ -41,7 +41,6 @@ def build_apps(apps):
         print('{} application {} start with address {}'.format(prefix, app, hex(base_address+step*app_id)))
         with open(linker, 'w+') as f:
             f.writelines(lines_before)
-        app_id = app_id + 1
     print('{} Building apps succeeded!'.format(prefix))
 
 
@@ -126,8 +125,11 @@ def __main__():
     generate_link_app(apps)
     build_apps(apps)
     build_os()
-    run_os()
-    # debug_os()
+
+    if DEBUG:
+        debug_os()
+    else:
+        run_os()
 
 
 __main__()

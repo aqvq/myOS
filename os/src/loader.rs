@@ -1,7 +1,5 @@
 // os/src/loader.rs
 
-use riscv::register::mcause::Trap;
-
 use crate::{config::*, trap::TrapContext};
 use core::arch::asm;
 

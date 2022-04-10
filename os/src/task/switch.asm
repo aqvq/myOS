@@ -31,10 +31,11 @@ __switch:
 
     # 阶段3
     # restore ra & s0~s11 of current executrion
-    ld ra, 8(a1)
+    ld ra, 0(a1)
     .set n, 0
     .rept 12
         LOAD_SN %n
+        .set n, n+1
     .endr
     # restore kernel stack of next task
     ld sp, 8(a1)

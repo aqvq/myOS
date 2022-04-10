@@ -2,8 +2,8 @@
 
 mod context;
 use crate::syscall::syscall;
-use core::arch::global_asm;
 use crate::task;
+use core::arch::global_asm;
 use riscv::register::{
     mtvec::TrapMode,
     scause::{self, Exception, Trap},
