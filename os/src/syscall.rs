@@ -23,7 +23,7 @@ pub fn sys_write(file_descriptor: usize, buf: *const u8, len: usize) -> isize {
 
 pub fn sys_exit(exit_state: i32) -> ! {
     println!("[kernel] Application exited with code {}", exit_state);
-    task::run_app()
+    task::run_next_app()
 }
 
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {

@@ -16,8 +16,9 @@ mod loader;
 mod task;
 
 use core::arch::global_asm;
-global_asm!(include_str!("entry.asm"));
-global_asm!(include_str!("link_app.asm"));
+
+global_asm!(include_str!("entry.S"));
+global_asm!(include_str!("link_app.S"));
 
 #[no_mangle]
 pub fn rust_main() -> ! {
@@ -27,7 +28,10 @@ pub fn rust_main() -> ! {
     println!("[kernel] trap::init() Done!");
     task::init();
     println!("[kernel] task::init() Done!");
-    task::run_app();
+    loader::load_apps();
+    println!("[kernel] loader::load_apps() Done!");
+    task::run_next_app();
+    panic!("Unreachable in rust_main!");
 }
 
 // TODO: sbss()和ebss()是什么意思？

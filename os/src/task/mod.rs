@@ -88,7 +88,7 @@ lazy_static! {
                 core::slice::from_raw_parts(num_app_ptr.add(1), num_app + 1);
             app_start[..=num_app].copy_from_slice(app_start_raw);
 
-            load_apps();
+            // println!("app_start: {:#?}", app_start);
             // TODO: rust的slice语法
 
             AppManager{
@@ -107,7 +107,7 @@ pub fn init() {
     drop(app_manager);
 }
 
-pub fn run_app() -> ! {
+pub fn run_next_app() -> ! {
     println!("run_app");
     let mut app_manager = APP_MANAGER.exclusive_access();
     let current_app = app_manager.get_current_app();
@@ -124,7 +124,7 @@ pub fn run_app() -> ! {
     }
     unsafe {
         __restore( KERNEL_STACK.push_context(TrapContext::app_init_context(
-            APP_BASE_ADDRESS + current_app * APP_SIZE_LIMIT,
+            APP_BASE_ADDRESS + (current_app-1) * APP_SIZE_LIMIT,
             USER_STACK.get_sp(),
         )) as *const _ as usize);
     }

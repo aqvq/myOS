@@ -1,6 +1,8 @@
 // os/src/loader.rs
 
-use crate::config::*;
+use riscv::register::mcause::Trap;
+
+use crate::{config::*, trap::TrapContext};
 use core::arch::asm;
 
 pub fn load_apps() {
@@ -23,7 +25,7 @@ pub fn load_apps() {
         // unsafe {
         //     core::slice::from_raw_parts_mut(base_i as *mut u8, APP_SIZE_LIMIT).fill(0);
         // }
-        (base_i..base_i + APP_SIZE_LIMIT)
+        (base_i..(base_i + APP_SIZE_LIMIT))
             .for_each(|addr| unsafe { (addr as *mut u8).write_volatile(0) });
         // load app from data section to memory
         let src = unsafe {

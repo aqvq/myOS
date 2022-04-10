@@ -10,7 +10,7 @@ use riscv::register::{
     stval, stvec,
 };
 
-global_asm!(include_str!("trap.asm"));
+global_asm!(include_str!("trap.S"));
 
 /// set trap code
 pub fn init() {
@@ -33,11 +33,11 @@ pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
         }
         Trap::Exception(Exception::StoreFault) | Trap::Exception(Exception::StorePageFault) => {
             println!("[kernel] PageFault in application, kernel killed it.");
-            task::run_app();
+            task::run_next_app();
         }
         Trap::Exception(Exception::IllegalInstruction) => {
             println!("[kernel] IllegalInstruction in application, kernel killed it.");
-            task::run_app();
+            task::run_next_app();
         }
         // Trap::Exception(Exception::InstructionFault)=>{
         //     println!("[kernel] InstructionFault in application, kernel killed it.");

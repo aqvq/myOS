@@ -1,4 +1,4 @@
-# os/src/entry.asm
+# os/src/entry.S
 
     .section .text.entry
     .globl _start
