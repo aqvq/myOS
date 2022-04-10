@@ -1,5 +1,4 @@
 use crate::config::*;
-use crate::loader::load_apps;
 use crate::safe_cell::SafeCell;
 use crate::trap::*;
 use lazy_static::*;
@@ -45,7 +44,6 @@ impl UserStack {
 struct AppManager {
     num_app: usize,
     current_app: usize,
-    app_start: [usize; MAX_APP_NUM+1],
 }
 
 impl AppManager {
@@ -68,7 +66,7 @@ impl AppManager {
         self.current_app += 1;
     }
 
-    pub fn get_num_app(&self) -> usize {
+    pub fn _get_num_app(&self) -> usize {
         self.num_app
     }
 
@@ -94,12 +92,12 @@ lazy_static! {
             AppManager{
                 num_app,
                 current_app: 0,
-                app_start,
             }
         })
     };
 }
 
+/// init batch subsystem
 pub fn init() {
     println!("[kernel] print_app_info Done!");
     let app_manager = APP_MANAGER.exclusive_access();
@@ -107,6 +105,7 @@ pub fn init() {
     drop(app_manager);
 }
 
+/// run next app
 pub fn run_next_app() -> ! {
     println!("run_app");
     let mut app_manager = APP_MANAGER.exclusive_access();

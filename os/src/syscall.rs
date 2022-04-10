@@ -6,6 +6,7 @@ const SYSCALL_EXIT: usize = 93;
 use crate::task;
 const FD_STDOUT: usize = 1;
 
+/// write buf of length 'len' to a file with 'file_descriptor'
 pub fn sys_write(file_descriptor: usize, buf: *const u8, len: usize) -> isize {
     println!("os/sys_write");
     match file_descriptor {
@@ -21,11 +22,14 @@ pub fn sys_write(file_descriptor: usize, buf: *const u8, len: usize) -> isize {
     }
 }
 
+/// task exits and submit an exit code
 pub fn sys_exit(exit_state: i32) -> ! {
     println!("[kernel] Application exited with code {}", exit_state);
     task::run_next_app()
 }
 
+
+/// handle syscall exception with 'syscall_id' and other arguments
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
     match syscall_id {
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),

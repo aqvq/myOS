@@ -1,8 +1,8 @@
 // os/src/loader.rs
 
-use riscv::register::mcause::Trap;
+// use riscv::register::mcause::Trap;
 
-use crate::{config::*, trap::TrapContext};
+use crate::config::*;
 use core::arch::asm;
 
 pub fn load_apps() {

@@ -8,6 +8,7 @@ base_address = 0x80400000
 step = 0x20000
 linker = 'user/src/linker.ld'
 prefix = '[build.py]'
+DEBUG_OS = False
 
 def exit_function():
     """
@@ -120,13 +121,27 @@ def discover_app():
         ret.append(app[:app.find('.')])
     return ret
 
+def remove_target_directory():
+    """
+    remove_target_directory remove os target directory and user target directory
+    """    
+    if os.system('rm -rf ./os/target') != 0:
+        print('{} Error on remove os target directory'.format(prefix))
+        exit_function()
+    if os.system("rm -rf ./user/target") != 0:
+        print('{} Error on remove user target directory'.format(prefix))
+        exit_function()
+
 def __main__():
+    remove_target_directory()
     apps = discover_app()
     generate_link_app(apps)
     build_apps(apps)
     build_os()
-    run_os()
-    # debug_os()
 
+    if DEBUG_OS:
+        debug_os()
+    else:
+        run_os()
 
 __main__()
