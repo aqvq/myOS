@@ -30,7 +30,7 @@ impl TrapContext {
             sepc: entry,
         };
         cx.set_sp(sp);
-        println!("[kernel] app_init_context Done!");
+        // println!("[kernel] app_init_context Done!");
         cx
     }
 }

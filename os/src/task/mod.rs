@@ -30,7 +30,7 @@ impl KernelStack {
         unsafe {
             *cx_ptr = cx;
         }
-        println!("[kernel] push_context Done!");
+        // println!("[kernel] push_context Done!");
         unsafe { cx_ptr.as_mut().unwrap() }
     }
 }
@@ -99,7 +99,7 @@ lazy_static! {
 
 /// init batch subsystem
 pub fn init() {
-    println!("[kernel] print_app_info Done!");
+    // println!("[kernel] print_app_info Done!");
     let app_manager = APP_MANAGER.exclusive_access();
     app_manager.print_app_info();
     drop(app_manager);
@@ -107,17 +107,12 @@ pub fn init() {
 
 /// run next app
 pub fn run_next_app() -> ! {
-    println!("run_app");
+    // println!("run_next_app");
     let mut app_manager = APP_MANAGER.exclusive_access();
     let current_app = app_manager.get_current_app();
     app_manager.move_to_next_app();
-    // println!("{:#?}", app_manager);
     drop(app_manager);
 
-    // if app_manager.get_current_app() >= app_manager.get_num_app() {
-    //     println!("[kernel] All tasks are completed!");
-    //     sys_exit(0);
-    // }
     extern "C" {
         fn __restore(cx_addr: usize);
     }
