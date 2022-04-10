@@ -2,7 +2,6 @@
 
 mod context;
 use crate::syscall::syscall;
-use crate::task;
 use core::arch::global_asm;
 use riscv::register::{
     mtvec::TrapMode,
@@ -23,6 +22,7 @@ pub fn init() {
 }
 
 #[no_mangle]
+/// handle an interrupt, exception, or system call from user space
 pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
     let scause = scause::read();
     let stval = stval::read();

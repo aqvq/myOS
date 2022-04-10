@@ -1,18 +1,19 @@
 // os/src/task/context.rs
 
+#[repr(C)]
 #[derive(Clone, Copy)]
 pub struct TaskContext {
-    ra: usize,
-    sp: usize,
-    s: [usize; 12],
+    _ra: usize,
+    _sp: usize,
+    _s: [usize; 12],
 }
 
 impl TaskContext {
     pub fn zero_init() -> Self {
         Self {
-            ra: 0,
-            sp: 0,
-            s: [0; 12],
+            _ra: 0,
+            _sp: 0,
+            _s: [0; 12],
         }
     }
 
@@ -21,9 +22,9 @@ impl TaskContext {
             fn __restore();
         }
         Self {
-            ra: __restore as usize,
-            sp: kstack_ptr,
-            s: [0; 12],
+            _ra: __restore as usize,
+            _sp: kstack_ptr,
+            _s: [0; 12],
         }
     }
 }

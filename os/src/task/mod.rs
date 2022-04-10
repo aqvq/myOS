@@ -7,7 +7,6 @@ mod task;
 use crate::config::*;
 use crate::loader::*;
 use crate::safe_cell::SafeCell;
-use crate::trap::*;
 use context::*;
 use lazy_static::*;
 use task::*;
