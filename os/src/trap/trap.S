@@ -1,4 +1,4 @@
-# os/src/trap/trap.asm
+# os/src/trap/trap.S
 
 # 注意我们需要在 trap.S 开头加上 .altmacro 才能正常使用 .rept 命令
 .altmacro

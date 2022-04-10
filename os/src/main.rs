@@ -1,23 +1,29 @@
 // os/src/main.rs
 
+//! myOS
+
 #![no_std]
 #![no_main]
 #![feature(panic_info_message)]
+#![deny(missing_docs)]
+#![deny(warnings)]
 
 #[macro_use]
 mod console;
-pub mod batch;
+mod batch;
 mod lang_items;
 mod sbi;
 mod safe_cell;
-pub mod syscall;
-pub mod trap;
+mod syscall;
+mod trap;
 
+use core::include_str;
 use core::arch::global_asm;
-global_asm!(include_str!("entry.asm"));
-global_asm!(include_str!("link_app.asm"));
+global_asm!(include_str!("entry.S"));
+global_asm!(include_str!("link_app.S"));
 
 #[no_mangle]
+/// main function entry
 pub fn rust_main() -> ! {
     clear_bss();
 
@@ -27,16 +33,7 @@ pub fn rust_main() -> ! {
     batch::run_next_app();
 }
 
-// TODO: sbss()和ebss()是什么意思？
-// TODO: 了解一下rust的extern C语法
-// pub fn clear_bss() {
-//     extern "C" {
-//         fn sbss();
-//         fn ebss();
-//     }
-//     (sbss as usize..ebss as usize).for_each(|a| unsafe { (a as *mut u8).write_volatile(0) });
-// }
-
+/// clear bss segment
 pub fn clear_bss() {
     extern "C" {
         fn sbss();
