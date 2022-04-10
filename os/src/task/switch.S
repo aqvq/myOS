@@ -1,4 +1,4 @@
-# os/src/task/switch.asm
+# os/src/task/switch.S
 .altmacro
 .macro SAVE_SN n
     sd s\n, (\n+2)*8(a0)

@@ -3,7 +3,7 @@
 use core::arch::global_asm;
 use super::context::TaskContext;
 
-global_asm!(include_str!("switch.asm"));
+global_asm!(include_str!("switch.S"));
 
 
 extern "C" {

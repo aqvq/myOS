@@ -10,7 +10,7 @@ use riscv::register::{
     stval, stvec,
 };
 
-global_asm!(include_str!("trap.asm"));
+global_asm!(include_str!("trap.S"));
 
 /// set trap code
 pub fn init() {
