@@ -1,5 +1,6 @@
 # user/build.py
 
+import enum
 import os
 from sys import prefix
 
@@ -21,8 +22,7 @@ def build_apps(apps):
     Args:
         apps (list): user application name list 
     """
-    for app in apps:
-        app_id = 0
+    for app_id, app in enumerate(apps):
         lines = []
         lines_before = []
         with open(linker, 'r') as f:
@@ -41,7 +41,6 @@ def build_apps(apps):
         print('{} application {} start with address {}'.format(prefix, app, hex(base_address+step*app_id)))
         with open(linker, 'w+') as f:
             f.writelines(lines_before)
-        app_id = app_id + 1
     print('{} Building apps succeeded!'.format(prefix))
 
 
