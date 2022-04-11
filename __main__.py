@@ -9,7 +9,10 @@ step = 0x20000
 linker = 'user/src/linker.ld'
 prefix = '[build.py]'
 DEBUG_OS = False
-
+K210SERIALPORT = "/dev/ttyUSB0"
+BOOTLOADER = "./bootloader/rustsbi-k210.bin"
+KERNEL_BIN = "./os/target/riscv64gc-unknown-none-elf/release/os.bin"
+K210_BOOTLOADER_SIZE = "131072"
 def exit_function():
     """
     exit_function some actions when exit
@@ -121,16 +124,134 @@ def remove_target_directory():
         print('{} Error on remove user target directory'.format(prefix))
         exit_function()
 
-def __main__():
+def k210():
+    with open ("./os/src/linker.ld" , "w") as f:
+        f.writelines("""
+OUTPUT_ARCH(riscv)
+ENTRY(_start)
+BASE_ADDRESS = 0x80020000;
+
+SECTIONS
+{
+    . = BASE_ADDRESS;
+    skernel = .;
+
+    stext = .;
+    .text : {
+        *(.text.entry)
+        *(.text .text.*)
+    }
+    . = ALIGN(4K);
+    etext = .;
+    
+    srodata = .;
+    .rodata : {
+        *(.rodata .rodata.*)
+        *(.srodata .srodata.*)
+    }
+    . = ALIGN(4K);
+    erodata = .;
+
+    sdata = .;
+    .data : {
+        *(.data .data.*)
+        *(.sdata .sdata.*)
+    }
+    . = ALIGN(4K);
+    edata = .;
+
+    .bss : {
+        *(.bss.stack)
+        sbss = .;
+        *(.bss .bss.*)
+        *(.sbss .sbss.*)
+    }
+    . = ALIGN(4K);
+    ebss = .;
+    
+    ekernel = .;
+
+    /DISCARD/ : {
+        *(.eh_frame)
+    }
+}
+""")
     remove_target_directory()
     apps = discover_app()
     generate_link_app(apps)
     build_apps(apps)
     build_os()
+    os.system("cp {0} {0}.copy".format(BOOTLOADER))
+    os.system("dd if={} of={}.copy bs={} seek=1".format(KERNEL_BIN,BOOTLOADER,K210_BOOTLOADER_SIZE))
+    os.system("mv {}.copy {}".format(BOOTLOADER, KERNEL_BIN))
+    os.system("kflash -p {} -b 1500000 {}".format(K210SERIALPORT,KERNEL_BIN))
+    with open ("./os/src/linker.ld" , "w") as f:
+        f.writelines("""
+OUTPUT_ARCH(riscv)
+ENTRY(_start)
+BASE_ADDRESS = 0x80200000;
 
+SECTIONS
+{
+    . = BASE_ADDRESS;
+    skernel = .;
+
+    stext = .;
+    .text : {
+        *(.text.entry)
+        *(.text .text.*)
+    }
+    . = ALIGN(4K);
+    etext = .;
+    
+    srodata = .;
+    .rodata : {
+        *(.rodata .rodata.*)
+        *(.srodata .srodata.*)
+    }
+    . = ALIGN(4K);
+    erodata = .;
+
+    sdata = .;
+    .data : {
+        *(.data .data.*)
+        *(.sdata .sdata.*)
+    }
+    . = ALIGN(4K);
+    edata = .;
+
+    .bss : {
+        *(.bss.stack)
+        sbss = .;
+        *(.bss .bss.*)
+        *(.sbss .sbss.*)
+    }
+    . = ALIGN(4K);
+    ebss = .;
+    
+    ekernel = .;
+
+    /DISCARD/ : {
+        *(.eh_frame)
+    }
+}
+""")
+    os.system("python3 -m serial.tools.miniterm --eol LF --dtr 0 --rts 0 --filter direct {} 115200".format(K210SERIALPORT))
+
+def qemu():
+    remove_target_directory()
+    apps = discover_app()
+    generate_link_app(apps)
+    build_apps(apps)
+    build_os()
     if DEBUG_OS:
         debug_os()
     else:
         run_os()
+
+def __main__():
+
+    k210()
+
 
 __main__()
