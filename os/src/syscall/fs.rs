@@ -2,7 +2,6 @@ const FD_STDOUT: usize = 1;
 
 /// write buf of length 'len' to a file with 'file_descriptor'
 pub fn sys_write(file_descriptor: usize, buf: *const u8, len: usize) -> isize {
-    println!("os/sys_write");
     match file_descriptor {
         FD_STDOUT => {
             let slice = unsafe { core::slice::from_raw_parts(buf, len) };

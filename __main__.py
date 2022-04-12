@@ -18,8 +18,9 @@ qemu_boot_loader = "./bootloader/rustsbi-qemu.bin"
 kernel_bin = "./os/target/riscv64gc-unknown-none-elf/release/os"
 k210_boot_loader_size = "131072"
 rebuild = True
-k210_mode= False
+k210_mode = True
 debug_mode = False
+
 
 def exit_function():
     """
@@ -41,20 +42,26 @@ def build_apps(apps):
         with open(user_linker, 'r') as f:
             for line in f.readlines():
                 lines_before.append(line)
-                line = line.replace(hex(user_app_base_address), hex(user_app_base_address+step*app_id))
+                line = line.replace(hex(user_app_base_address),
+                                    hex(user_app_base_address + step * app_id))
                 lines.append(line)
         with open(user_linker, 'w+') as f:
             f.writelines(lines)
-        if os.system('cd user && cargo build --bin {} --release'.format(app)) != 0:
+        if os.system(
+                'cd user && cargo build --bin {} --release'.format(app)) != 0:
             print('{} Error on running cargo build apps!'.format(prefix))
             exit_function()
-        if os.system('cd user && rust-objcopy --strip-all target/riscv64gc-unknown-none-elf/release/{0}  -O binary target/riscv64gc-unknown-none-elf/release/{0}.bin'.format(app)) !=0 :
+        if os.system(
+                'cd user && rust-objcopy --strip-all target/riscv64gc-unknown-none-elf/release/{0}  -O binary target/riscv64gc-unknown-none-elf/release/{0}.bin'
+                .format(app)) != 0:
             print('{} Error on running rust objcopy'.format(prefix))
             exit_function()
-        print('{} application {} start with address {}'.format(prefix, app, hex(user_app_base_address+step*app_id)))
+        print('{} application {} start with address {}'.format(
+            prefix, app, hex(user_app_base_address + step * app_id)))
         with open(user_linker, 'w+') as f:
             f.writelines(lines_before)
     print('{} Building apps succeeded!'.format(prefix))
+
 
 def build_os(isK210=False):
     """
@@ -74,9 +81,8 @@ def build_os(isK210=False):
     if os.system('cd os && cargo build --release') != 0:
         print('{} Error on running cargo build os'.format(prefix))
         exit_function()
-    if os.system(
-            'rust-objcopy --strip-all {0} -O binary {0}.bin'.format(kernel_bin)
-    ) != 0:
+    if os.system('rust-objcopy --strip-all {0} -O binary {0}.bin'.format(
+            kernel_bin)) != 0:
         print('{} Error on running rust objcopy'.format(prefix))
         exit_function()
     print('{} Building OS succeeded!'.format(prefix))
@@ -91,8 +97,8 @@ def run_os():
     run_os run operation system
     """
     if os.system(
-            'qemu-system-riscv64 -machine virt -nographic -bios {} -device loader,file={}.bin,addr={}'.format(qemu_boot_loader,kernel_bin,hex(os_qemu_addr))
-    ) != 0:
+            'qemu-system-riscv64 -machine virt -nographic -bios {} -device loader,file={}.bin,addr={}'
+            .format(qemu_boot_loader, kernel_bin, hex(os_qemu_addr))) != 0:
         print('{} Error on running qemu'.format(prefix))
         exit_function()
 
@@ -102,13 +108,13 @@ def debug_os():
     debug_os debug operation system
     """
     if os.system(
-            'qemu-system-riscv64 -machine virt -nographic -bios {} -device loader,file={}.bin,addr={} -s -S &'.format(qemu_boot_loader,kernel_bin,hex(os_qemu_addr))
-    ) != 0:
+            'qemu-system-riscv64 -machine virt -nographic -bios {} -device loader,file={}.bin,addr={} -s -S &'
+            .format(qemu_boot_loader, kernel_bin, hex(os_qemu_addr))) != 0:
         print('{} Error on running qemu'.format(prefix))
         exit_function()
     if os.system(
-            "riscv64-unknown-elf-gdb -ex 'file {}' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'".format(kernel_bin)
-    ) != 0:
+            "riscv64-unknown-elf-gdb -ex 'file {}' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'"
+            .format(kernel_bin)) != 0:
         print('{} Error on running gdb'.format(prefix))
         exit_function()
 
@@ -175,18 +181,18 @@ def remove_target_directory():
 def burn_k210():
     """
     burn_k210 burn firmware to k210 dev board
-    """    
+    """
     if os.system("cp {0} {0}.copy".format(k210_boot_loader)) != 0:
         print("{} Error on running cp!".format(prefix))
         exit_function()
-    if os.system("dd if={} of={}.copy bs={} seek=1".format(
+    if os.system("dd if={}.bin of={}.copy bs={} seek=1".format(
             kernel_bin, k210_boot_loader, k210_boot_loader_size)) != 0:
         print("{} Error on running dd!".format(prefix))
         exit_function()
-    if os.system("mv {}.copy {}".format(k210_boot_loader, kernel_bin)) != 0:
+    if os.system("mv {}.copy {}.bin".format(k210_boot_loader, kernel_bin)) != 0:
         print("{} Error on running mv!".format(prefix))
         exit_function()
-    if os.system("kflash -p {} -b 1500000 {}".format(k210_serial_port,
+    if os.system("kflash -p {} -b 1500000 {}.bin".format(k210_serial_port,
                                                      kernel_bin)) != 0:
         print("{} Error on running kflash!".format(prefix))
         exit_function()
@@ -196,11 +202,27 @@ def burn_k210():
 def run_k210():
     """
     run_k210 run firmware in k210
-    """    
+    """
     if os.system(
             "python3 -m serial.tools.miniterm --eol LF --dtr 0 --rts 0 --filter direct {} 115200"
             .format(k210_serial_port)) != 0:
         print("{} Error on running serial.tools.miniterm!".format(prefix))
+        exit_function()
+
+
+def install():
+    """
+    install install myOS dev environment
+    """
+    with open("INSTALL", "r") as f:
+        for line in f.readlines():
+            command = line.strip()
+            if command.startswith('#') or command.startswith('\n'):
+                continue
+            if os.system(command) != 0:
+                print("{} Error on running \"{}\"!", prefix, command)
+                exit_function()
+    print("{} Installing environment succeeded!".format(prefix))
 
 
 def __main__():
