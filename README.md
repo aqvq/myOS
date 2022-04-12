@@ -107,3 +107,7 @@ sudo apt install python3-serial
 ```bash
 python __main__.py
 ```
+
+# 2022年4月12日
+
+问题：误删user/src/syscall.rs文件
