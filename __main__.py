@@ -2,22 +2,31 @@
 
 import enum
 import os
+import sys
 from sys import prefix
 
-base_address = 0x80400000
+os_qemu_addr = 0x80200000
+os_k210_addr = 0x80020000
+user_app_base_address = 0x80400000
 step = 0x20000
-linker = 'user/src/linker.ld'
+user_linker = './user/src/linker.ld'
+os_linker = './os/src/linker.ld'
 prefix = '[build.py]'
-DEBUG_OS = False
-K210SERIALPORT = "/dev/ttyUSB0"
-BOOTLOADER = "./bootloader/rustsbi-k210.bin"
-KERNEL_BIN = "./os/target/riscv64gc-unknown-none-elf/release/os.bin"
-K210_BOOTLOADER_SIZE = "131072"
+k210_serial_port = "/dev/ttyUSB0"
+k210_boot_loader = "./bootloader/rustsbi-k210.bin"
+qemu_boot_loader = "./bootloader/rustsbi-qemu.bin"
+kernel_bin = "./os/target/riscv64gc-unknown-none-elf/release/os"
+k210_boot_loader_size = "131072"
+rebuild = False
+k210_mode= False
+debug_mode = False
+
 def exit_function():
     """
     exit_function some actions when exit
-    """    
+    """
     exit()
+
 
 def build_apps(apps):
     """
@@ -26,45 +35,74 @@ def build_apps(apps):
     Args:
         apps (list): user application name list 
     """
-    for app_id,app in enumerate(apps):
-        if os.system('cd user && cargo build --bin {} --release'.format(app)) != 0:
+    for app_id, app in enumerate(apps):
+        if os.system(
+                'cd user && cargo build --bin {} --release'.format(app)) != 0:
             print('{} Error on running cargo build apps!'.format(prefix))
             exit_function()
-        if os.system('cd user && rust-objcopy --strip-all target/riscv64gc-unknown-none-elf/release/{0}  -O binary target/riscv64gc-unknown-none-elf/release/{0}.bin'.format(app)) !=0 :
+        if os.system(
+                'cd user && rust-objcopy --strip-all target/riscv64gc-unknown-none-elf/release/{0}  -O binary target/riscv64gc-unknown-none-elf/release/{0}.bin'
+                .format(app)) != 0:
             print('{} Error on running rust objcopy'.format(prefix))
             exit_function()
-        print('{} application {} start with address {}'.format(prefix, app, hex(base_address)))
+        print('{} application {} start with address {}'.format(
+            prefix, app, hex(user_app_base_address)))
     print('{} Building apps succeeded!'.format(prefix))
 
 
-def build_os():
+def build_os(isK210=False):
     """
     build_os build operation system
     """
+    lines = []
+    lines_before = []
+    if isK210:
+        with open(os_linker, "r") as f:
+            for line in f.readlines():
+                lines_before.append(line)
+                line = line.replace(hex(os_qemu_addr), hex(os_k210_addr))
+                lines.append(line)
+        with open(os_linker, 'w+') as f:
+            f.writelines(lines)
+
     if os.system('cd os && cargo build --release') != 0:
         print('{} Error on running cargo build os'.format(prefix))
         exit_function()
-    if os.system('cd os && rust-objcopy --strip-all target/riscv64gc-unknown-none-elf/release/os -O binary target/riscv64gc-unknown-none-elf/release/os.bin') != 0:
+    if os.system(
+            'rust-objcopy --strip-all {0} -O binary {0}.bin'.format(kernel_bin)
+    ) != 0:
         print('{} Error on running rust objcopy'.format(prefix))
         exit_function()
     print('{} Building OS succeeded!'.format(prefix))
+
+    if isK210:
+        with open(os_linker, 'w+') as f:
+            f.writelines(lines_before)
+
 
 def run_os():
     """
     run_os run operation system
     """
-    if os.system('qemu-system-riscv64 -machine virt -nographic -bios ./bootloader/rustsbi-qemu.bin -device loader,file=./os/target/riscv64gc-unknown-none-elf/release/os.bin,addr=0x80200000') != 0:
+    if os.system(
+            'qemu-system-riscv64 -machine virt -nographic -bios {} -device loader,file={}.bin,addr={}'.format(qemu_boot_loader,kernel_bin,hex(os_qemu_addr))
+    ) != 0:
         print('{} Error on running qemu'.format(prefix))
         exit_function()
+
 
 def debug_os():
     """
     debug_os debug operation system
     """
-    if os.system('qemu-system-riscv64 -machine virt -nographic -bios ./bootloader/rustsbi-qemu.bin -device loader,file=./os/target/riscv64gc-unknown-none-elf/release/os.bin,addr=0x80200000 -s -S &') != 0:
+    if os.system(
+            'qemu-system-riscv64 -machine virt -nographic -bios {} -device loader,file={}.bin,addr={} -s -S &'.format(qemu_boot_loader,kernel_bin,hex(os_qemu_addr))
+    ) != 0:
         print('{} Error on running qemu'.format(prefix))
         exit_function()
-    if os.system(r"riscv64-unknown-elf-gdb -ex 'file ./os/target/riscv64gc-unknown-none-elf/release/os' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'") != 0:
+    if os.system(
+            "riscv64-unknown-elf-gdb -ex 'file {}' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'".format(kernel_bin)
+    ) != 0:
         print('{} Error on running gdb'.format(prefix))
         exit_function()
 
@@ -75,7 +113,7 @@ def generate_link_app(apps):
 
     Args:
         apps (list): user application list 
-    """    
+    """
     with open('os/src/link_app.S', 'w') as f:
         f.write("""# This assembly file is automatically generated by python
 # os/src/link_app.S
@@ -88,7 +126,7 @@ _num_app:
         f.write("    .quad {}\n".format(len(apps)))
         for i in range(len(apps)):
             f.write("    .quad app_{}_start\n".format(i))
-        f.write("    .quad app_{}_end\n".format(len(apps)-1))
+        f.write("    .quad app_{}_end\n".format(len(apps) - 1))
         for i, app in enumerate(apps):
             f.write("""
     .section .data
@@ -97,8 +135,9 @@ _num_app:
 app_{0}_start:
     .incbin "../user/target/riscv64gc-unknown-none-elf/release/{1}.bin"
 app_{0}_end:
-    """.format(i,app))
+    """.format(i, app))
     print('{} Generating link_app assembly file succeeded!'.format(prefix))
+
 
 def discover_app():
     """
@@ -113,145 +152,69 @@ def discover_app():
         ret.append(app[:app.find('.')])
     return ret
 
+
 def remove_target_directory():
     """
     remove_target_directory remove os target directory and user target directory
-    """    
+    """
     if os.system('rm -rf ./os/target') != 0:
-        print('{} Error on remove os target directory'.format(prefix))
+        print('{} Error on removing os target directory'.format(prefix))
         exit_function()
     if os.system("rm -rf ./user/target") != 0:
-        print('{} Error on remove user target directory'.format(prefix))
+        print('{} Error on removing user target directory'.format(prefix))
         exit_function()
+    print("{} Removing target directory succeeded!")
 
-def k210():
-    with open ("./os/src/linker.ld" , "w") as f:
-        f.writelines("""
-OUTPUT_ARCH(riscv)
-ENTRY(_start)
-BASE_ADDRESS = 0x80020000;
 
-SECTIONS
-{
-    . = BASE_ADDRESS;
-    skernel = .;
+def burn_k210():
+    """
+    burn_k210 burn firmware to k210 dev board
+    """    
+    if os.system("cp {0} {0}.copy".format(k210_boot_loader)) != 0:
+        print("{} Error on running cp!".format(prefix))
+        exit_function()
+    if os.system("dd if={} of={}.copy bs={} seek=1".format(
+            kernel_bin, k210_boot_loader, k210_boot_loader_size)) != 0:
+        print("{} Error on running dd!".format(prefix))
+        exit_function()
+    if os.system("mv {}.copy {}".format(k210_boot_loader, kernel_bin)) != 0:
+        print("{} Error on running mv!".format(prefix))
+        exit_function()
+    if os.system("kflash -p {} -b 1500000 {}".format(k210_serial_port,
+                                                     kernel_bin)) != 0:
+        print("{} Error on running kflash!".format(prefix))
+        exit_function()
+    print("{} Burning k210 succeeded!".format(prefix))
 
-    stext = .;
-    .text : {
-        *(.text.entry)
-        *(.text .text.*)
-    }
-    . = ALIGN(4K);
-    etext = .;
-    
-    srodata = .;
-    .rodata : {
-        *(.rodata .rodata.*)
-        *(.srodata .srodata.*)
-    }
-    . = ALIGN(4K);
-    erodata = .;
 
-    sdata = .;
-    .data : {
-        *(.data .data.*)
-        *(.sdata .sdata.*)
-    }
-    . = ALIGN(4K);
-    edata = .;
+def run_k210():
+    """
+    run_k210 run firmware in k210
+    """    
+    if os.system(
+            "python3 -m serial.tools.miniterm --eol LF --dtr 0 --rts 0 --filter direct {} 115200"
+            .format(k210_serial_port)) != 0:
+        print("{} Error on running serial.tools.miniterm!".format(prefix))
 
-    .bss : {
-        *(.bss.stack)
-        sbss = .;
-        *(.bss .bss.*)
-        *(.sbss .sbss.*)
-    }
-    . = ALIGN(4K);
-    ebss = .;
-    
-    ekernel = .;
-
-    /DISCARD/ : {
-        *(.eh_frame)
-    }
-}
-""")
-    remove_target_directory()
-    apps = discover_app()
-    generate_link_app(apps)
-    build_apps(apps)
-    build_os()
-    os.system("cp {0} {0}.copy".format(BOOTLOADER))
-    os.system("dd if={} of={}.copy bs={} seek=1".format(KERNEL_BIN,BOOTLOADER,K210_BOOTLOADER_SIZE))
-    os.system("mv {}.copy {}".format(BOOTLOADER, KERNEL_BIN))
-    os.system("kflash -p {} -b 1500000 {}".format(K210SERIALPORT,KERNEL_BIN))
-    with open ("./os/src/linker.ld" , "w") as f:
-        f.writelines("""
-OUTPUT_ARCH(riscv)
-ENTRY(_start)
-BASE_ADDRESS = 0x80200000;
-
-SECTIONS
-{
-    . = BASE_ADDRESS;
-    skernel = .;
-
-    stext = .;
-    .text : {
-        *(.text.entry)
-        *(.text .text.*)
-    }
-    . = ALIGN(4K);
-    etext = .;
-    
-    srodata = .;
-    .rodata : {
-        *(.rodata .rodata.*)
-        *(.srodata .srodata.*)
-    }
-    . = ALIGN(4K);
-    erodata = .;
-
-    sdata = .;
-    .data : {
-        *(.data .data.*)
-        *(.sdata .sdata.*)
-    }
-    . = ALIGN(4K);
-    edata = .;
-
-    .bss : {
-        *(.bss.stack)
-        sbss = .;
-        *(.bss .bss.*)
-        *(.sbss .sbss.*)
-    }
-    . = ALIGN(4K);
-    ebss = .;
-    
-    ekernel = .;
-
-    /DISCARD/ : {
-        *(.eh_frame)
-    }
-}
-""")
-    os.system("python3 -m serial.tools.miniterm --eol LF --dtr 0 --rts 0 --filter direct {} 115200".format(K210SERIALPORT))
-
-def qemu():
-    remove_target_directory()
-    apps = discover_app()
-    generate_link_app(apps)
-    build_apps(apps)
-    build_os()
-    if DEBUG_OS:
-        debug_os()
-    else:
-        run_os()
 
 def __main__():
-
-    k210()
+    """
+    __main__ main function
+    """
+    if rebuild:
+        remove_target_directory()
+    apps = discover_app()
+    generate_link_app(apps)
+    build_apps(apps)
+    build_os(k210_mode)
+    if k210_mode:
+        burn_k210()
+        run_k210()
+    else:
+        if debug_mode:
+            debug_os()
+        else:
+            run_os()
 
 
 __main__()
