@@ -1,7 +1,6 @@
 // os/src/trap/mod.rs
 
 mod context;
-use crate::syscall::syscall;
 use core::arch::global_asm;
 use crate::task;
 use riscv::register::{
@@ -9,6 +8,7 @@ use riscv::register::{
     scause::{self, Exception, Trap},
     stval, stvec,
 };
+use crate::syscall::syscall;
 
 global_asm!(include_str!("trap.S"));
 
