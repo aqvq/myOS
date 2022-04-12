@@ -14,7 +14,7 @@ mod syscall;
 pub extern "C" fn _start() -> ! {
     clear_bss();
     exit(main());
-    panic!("unreachable after sys_exit!");
+    panic!("Unreachable after sys_exit!");
 }
 
 #[linkage = "weak"]
@@ -36,3 +36,5 @@ use syscall::*;
 pub fn write(fd:usize, buffer: &[u8]) -> isize{ sys_write(fd, buffer)}
 
 pub fn exit(exit_code: i32) ->isize{ sys_exit(exit_code)}
+
+pub fn yield_() -> isize{ sys_yield()}

@@ -10,11 +10,13 @@
 
 #[macro_use]
 mod console;
-mod batch;
+mod config;
 mod lang_items;
-mod sbi;
+mod loader;
 mod safe_cell;
+mod sbi;
 mod syscall;
+mod task;
 mod trap;
 
 use core::include_str;
@@ -25,12 +27,12 @@ global_asm!(include_str!("link_app.S"));
 #[no_mangle]
 /// main function entry
 pub fn rust_main() -> ! {
+    println!("[kernel] Starting...");
     clear_bss();
-
-    println!("[kernel] Hello!");
     trap::init();
-    batch::init();
-    batch::run_next_app();
+    loader::load_apps();
+    task::run_first_task();
+    panic!("Unreachable in rust_main!");
 }
 
 /// clear bss segment
