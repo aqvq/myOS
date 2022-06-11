@@ -105,7 +105,7 @@ sudo apt install python3-serial
 
 # 运行
 ```bash
-python __main__.py
+python3 __main__.py
 ```
 
 # 开发日志
